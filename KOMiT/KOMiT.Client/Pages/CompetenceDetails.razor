@@ -1,0 +1,126 @@
+﻿@page "/competencedetails"
+@inject HttpClient _httpClient
+@inject NavigationManager navigationManager
+
+
+@if (Competences == null)
+{
+    <h1>Loading...</h1>
+}
+else
+{
+    <div style="margin:5px">
+        <Button Color="ButtonColor.Primary">Opret kompetence</Button>
+    </div>
+
+    <Grid DataProvider="CompetenceDetailsDataProvider" HeaderRowCssClass="bg-secondary text-white border-bottom-0" TItem="Competence" AllowPaging="true" PageSize="15" AllowSorting="true">
+        <GridColumn TItem="Competence" HeaderText="Kompetence" SortKeySelector="Item => Item.Title">
+            @context.Title
+        </GridColumn>
+        <GridColumn TItem="Competence" HeaderText="Erfaring" SortKeySelector="Item => Item.Experience">
+            @context.Experience år
+        </GridColumn>
+        <GridColumn TItem="Competence" HeaderText="Beskrivelse">
+            <Tooltip Title="@context.Description">
+                <Icon Name="IconName.InfoCircleFill" Color="IconColor.Primary" />
+            </Tooltip>
+        </GridColumn>
+    </Grid>
+
+    <BarChart @ref="barChart" Width="800" Class="mb-4" />
+}
+
+@code {
+
+    private ICollection<Competence>? Competences { get; set; }
+    private Modal modal;
+
+    protected override void OnInitialized()
+    {
+        Competences = new List<Competence>
+        {
+            new Competence { Title = "Blazor", Experience = 6, Description = "Jeg føler mig stærk i..." },
+            new Competence { Title = "Testing", Experience = 4, Description = "Jeg føler mig stærk i..." }
+        };
+
+        chartData = new ChartData
+            {
+                Labels = GetDefaultDataLabels(1),
+                Datasets = new List<IChartDataset>
+            {
+                new BarChartDataset
+                {
+                    Label = "Blazor",
+                    Data = new List<double> { 6 },
+                    BackgroundColor = new List<string> { "#ff4500" },
+                    BorderColor = new List<string> { "#ff4500" },
+                    BorderWidth = new List<double> { 0 },
+                },
+                new BarChartDataset
+                {
+                    Label = "Testing",
+                    Data = new List<double> { 4 },
+                    BackgroundColor = new List<string> { "#2196F3" },
+                    BorderColor = new List<string> { "#2196F3" },
+                    BorderWidth = new List<double> { 0 },
+                }
+            }
+            };
+
+        barChartOptions = new BarChartOptions { Responsive = true, Interaction = new Interaction { Mode = InteractionMode.Index } };
+    }
+
+    private async Task<GridDataProviderResult<Competence>> CompetenceDetailsDataProvider(GridDataProviderRequest<Competence> request)
+    {
+        return await Task.FromResult(request.ApplyTo(Competences));
+    }
+
+    private async Task OnShowModalClick()
+    {
+        await modal?.ShowAsync();
+    }
+
+    private async Task OnHideModalClick()
+    {
+        await modal?.HideAsync();
+    }
+
+    public class Competence
+    {
+        public string Title { get; set; }
+        public int Experience { get; set; }
+        public string Description { get; set; }
+    }
+
+    private BarChart barChart = default!;
+    private BarChartOptions barChartOptions = default!;
+    private ChartData chartData = default!;
+    private int labelsCount = 0;
+
+    private string[] months = { "Kompetencer", "Testing" };
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await barChart.InitializeAsync(chartData, barChartOptions);
+        }
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    private List<string> GetDefaultDataLabels(int numberOfLabels)
+    {
+        var labels = new List<string>();
+        for (var index = 0; index < numberOfLabels; index++)
+        {
+            labels.Add(GetNextDataLabel());
+        }
+
+        return labels;
+    }
+
+    private string GetNextDataLabel()
+    {
+        return months[labelsCount++];
+    }
+}

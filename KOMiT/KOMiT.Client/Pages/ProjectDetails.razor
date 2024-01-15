@@ -1,0 +1,262 @@
+﻿@page "/projectdetails/{ID:int}"
+@using KOMiT.Core.Model;
+@inject HttpClient _httpClient
+@inject NavigationManager navigationManager
+
+
+<div class="parent">
+    <div class="div1">
+        <table>
+            <tbody>
+                <tr>
+                    <td>
+                        <b>Projekt: @_project.Name</b>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <b>Startdato: @_project.EstimatedStartDate.ToShortDateString() <Icon Name="IconName.Calendar" Color="IconColor.Primary"></Icon></b>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <b>Slutdato: @_project.EstimatedEndDate.ToShortDateString() <Icon Name="IconName.Calendar" Color="IconColor.Primary"></Icon></b>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+
+<div style="margin-bottom: 50px;">
+    <table class="main-table">
+        <tbody>
+            <tr>
+                <td </td>
+                <td><a class="is-link" style="cursor: pointer;">Opstartsfase</a></td>
+                <td><a class="is-link" style="cursor: pointer;">Kravindsamling</a></td>
+                <td><a class="is-link" style="cursor: pointer;">High-level design</a></td>
+                <td><a class="is-link" style="cursor: pointer;">Low-level design</a></td>
+                <td><a class="is-link" style="cursor: pointer;">Programmering</a></td>
+                <td><a @onclick="() => PhaseDetails(ID)" class="is-link" style="cursor: pointer;">Testing</a></td>
+                <td class="bold-text">Samlet antal dage:</td>
+            </tr>
+            <tr>
+                <td class="bold-text">Status:</td>
+                <td class="bold-text">Færdiggjort<Icon Name="IconName.CircleFill" Color="IconColor.Success" /></td>
+                <td class="bold-text">Færdiggjort<Icon Name="IconName.CircleFill" Color="IconColor.Success" /></td>
+                <td class="bold-text">Færdiggjort<Icon Name="IconName.CircleFill" Color="IconColor.Success" /></td>
+                <td class="bold-text">Færdiggjort<Icon Name="IconName.CircleFill" Color="IconColor.Success" /></td>
+                <td class="bold-text">Færdiggjort<Icon Name="IconName.CircleFill" Color="IconColor.Success" /></td>
+                <td>
+                    <b> @_project.Status.ToString()</b>
+                    @if (_project.Status == Core.Model.Enum.Status.Aktiv)
+                    {
+                        <Icon Name="IconName.CircleFill" Color="IconColor.Warning" />
+                    }
+                    else if (_project.Status == Core.Model.Enum.Status.Inaktiv)
+                    {
+                        <Icon Name="IconName.CircleFill" Color="IconColor.Danger" />
+                    }
+                    else
+                    {
+                        <Icon Name="IconName.CircleFill" Color="IconColor.Success" />
+                    }
+                </td>
+                <td></td>
+            </tr>
+            <tr>
+                <td class="bold-text">Estimeret dage:</td>
+                <td>30</td>
+                <td>60</td>
+                <td>50</td>
+                <td>50</td>
+                <td>200</td>
+                <td>100</td>
+                <td>490</td>
+            </tr>
+            <tr>
+                <td class="bold-text">Realiseret dage:</td>
+                <td>40</td>
+                <td>50</td>
+                <td>100</td>
+                <td>80</td>
+                <td>300</td>
+                <td></td>
+                <td>580</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-4">
+            <PieChart @ref="pieChart" Width="310" />
+        </div>
+        <div class="col-md-4">
+            <LineChart @ref="lineChart" Width="630" />
+        </div>
+    </div>
+</div>
+
+
+<style>
+    .main-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+        background-color: aliceblue;
+    }
+
+        .main-table, .main-table th, .main-table td {
+            border: 1px solid black;
+        }
+
+            .main-table th, .main-table td {
+                padding: 10px;
+                text-align: left;
+            }
+
+    .bold-text {
+        font-weight: bold;
+    }
+</style>
+
+
+@code {
+
+    private void PhaseDetails(int ID)
+    {
+        navigationManager.NavigateTo($"/phasedetails/{ID}");
+    }
+
+    [Parameter]
+    public int ID { get; set; }
+
+    private Project _project;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _project = await _httpClient.GetFromJsonAsync<Project>($"https://localhost:7282/api/project/GetDetailsById/{ID}");
+    }
+
+    private PieChart pieChart = default!;
+    private PieChartOptions pieChartOptions = default!;
+    private ChartData chartData = default!;
+    private string[]? backgroundColors;
+
+    private int datasetsCount = 0;
+    private int dataLabelsCount = 0;
+
+    protected override void OnInitialized()
+    {
+        backgroundColors = ColorBuilder.CategoricalTwelveColors;
+        chartData = new ChartData { Labels = GetDefaultDataLabels(2), Datasets = GetDefaultDataSets() };
+
+        pieChartOptions = new();
+        pieChartOptions.Responsive = true;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await pieChart.InitializeAsync(chartData, pieChartOptions);
+            await RenderWormAsync();
+        }
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+
+    private List<IChartDataset> GetDefaultDataSets()
+    {
+        var datasets = new List<IChartDataset>();
+
+        datasets.Add(new PieChartDataset
+            {
+                Label = "Dage",
+                Data = new List<double> { 680, 490 },
+                BackgroundColor = GetRandomBackgroundColors()
+            });
+
+        return datasets;
+    }
+
+    private List<string> GetRandomBackgroundColors()
+    {
+        var colors = new List<string>();
+        for (var index = 0; index < dataLabelsCount; index++)
+        {
+            colors.Add(backgroundColors![index]);
+        }
+
+        return colors;
+    }
+
+    private List<string> GetDefaultDataLabels(int numberOfLabels)
+    {
+        var labels = new List<string>();
+        for (var index = 0; index < numberOfLabels; index++)
+        {
+            labels.Add(GetNextDataLabel());
+            dataLabelsCount += 1;
+        }
+
+        return labels;
+    }
+
+    private string GetNextDataLabel() => dataLabelsCount == 0 ? "Realiserede dage" : "Estimerede dage";
+
+
+    private LineChart lineChart;
+
+    private async Task RenderWormAsync()
+    {
+        var data = new ChartData
+            {
+                Labels = new List<string> { "Opstartsfasen", "Kravindsamling", "High-level Design", "Low-level Design", "Programmering", "Testing" },
+                Datasets = new List<IChartDataset>()
+            {
+                new LineChartDataset()
+                {
+                    Label = "Realiserede dage",
+                    Data = new List<double>{ 40, 50, 100, 80, 300, 0 },
+                    BackgroundColor = new List<string>{ "rgb(104, 187, 196)" },
+                    BorderColor = new List<string>{ "rgb(104, 187, 196)" },
+                    BorderWidth = new List<double>{2},
+                    HoverBorderWidth = new List<double>{4},
+                    PointBackgroundColor = new List<string>{ "rgb(104, 187, 196)" },
+                    PointBorderColor = new List<string>{ "rgb(104, 187, 196)" },
+                    PointRadius = new List<int>{0},
+                    PointHoverRadius = new List<int>{4},
+                },
+
+                new LineChartDataset()
+                {
+                    Label = "Estimerede dage",
+                    Data = new List<double>{ 30, 60, 50, 50, 200, 100 },
+                    BackgroundColor = new List<string>{ "rgb(80, 135, 236)" },
+                    BorderColor = new List<string>{ "rgb(80, 135, 236)" },
+                    BorderWidth = new List<double>{2},
+                    HoverBorderWidth = new List<double>{4},
+                    PointBackgroundColor = new List<string>{ "rgb(80, 135, 236)" },
+                    PointBorderColor = new List<string>{ "rgb(80, 135, 236)" },
+                    PointRadius = new List<int>{0},
+                    PointHoverRadius = new List<int>{4},
+                },
+
+            }
+            };
+
+        var options = new LineChartOptions();
+
+        options.Interaction.Mode = InteractionMode.Index;
+
+        options.Responsive = true;
+
+        await lineChart.InitializeAsync(data, options);
+    }
+}

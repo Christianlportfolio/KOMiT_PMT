@@ -1,0 +1,91 @@
+﻿@page "/employee"
+@inject HttpClient _httpClient
+@inject NavigationManager navigationManager
+
+
+@if (Employees == null)
+{
+    <h1>Loading...</h1>
+}
+else
+{
+    <div style="margin:5px">
+        <Button Color="ButtonColor.Primary" @onclick="OnShowModalClick">Opret ansat  </Button>
+        <Modal @ref="modal" Title="Opret ansat">
+            <BodyTemplate>
+                <CreateEmployee OnClick="OnHideModalClick">
+                </CreateEmployee>
+            </BodyTemplate>
+            <FooterTemplate>
+            </FooterTemplate>
+        </Modal>
+        <Button Color="ButtonColor.Primary" @onclick="AllCompetences">Alle kompetencer</Button>
+    </div>
+
+    <Grid DataProvider="EmployeeDataProvider" HeaderRowCssClass="bg-secondary text-white border-bottom-0" TItem="Employee" AllowPaging="true" PageSize="12" AllowSorting="true">
+        <GridColumn TItem="Employee" HeaderText="Id" SortKeySelector="Item => Item.Id">
+            @context.Id
+        </GridColumn>
+        <GridColumn TItem="Employee" HeaderText="Navn" SortKeySelector="Item => Item.Name">
+            @context.Name
+        </GridColumn>
+        <GridColumn TItem="Employee">
+            <Dropdown AutoClose="true">
+                <DropdownToggleButton Color="ButtonColor.None"><Icon Name="IconName.PlusCircleFill" Color="IconColor.Primary" /></DropdownToggleButton>
+                <DropdownMenu>
+                    <DropdownItem To="#" Type="ButtonType.Link"> <Icon Name="IconName.CheckSquareFill" Color="IconColor.Primary" /> Afslut</DropdownItem>
+                    <DropdownItem To="#" Type="ButtonType.Link"> <Icon Name="IconName.PencilSquare" Color="IconColor.Primary" /> Rediger</DropdownItem>
+                    <DropdownItem To="#" Type="ButtonType.Link"> <Icon Name="IconName.Trash3Fill" Color="IconColor.Primary" /> Slet</DropdownItem>
+                </DropdownMenu>
+            </Dropdown>
+        </GridColumn>
+        <GridColumn TItem="Employee" HeaderText="Stilling" SortKeySelector="Item => Item.JobPosition">
+            @context.JobPosition
+        </GridColumn>
+        <GridColumn TItem="Employee" HeaderText="Kompetencer" SortKeySelector="Item => Item.Name">
+            <div style="text-align:left">
+                <a class="is-link" style="cursor: pointer;" @onclick="CompetenceDetails">@context.Name kompetencer</a>
+                <Tooltip Title="@($"{string.Join(", ", context.Competences?.Select(c => c.Title))}")">
+                    <Icon Name="IconName.InfoCircleFill" Color="IconColor.Primary" />
+                </Tooltip>
+            </div>
+        </GridColumn>
+    </Grid>
+
+}
+
+@code {
+
+    public ICollection<Employee>? Employees { get; set; }
+    private Modal modal;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Employees = await _httpClient.GetFromJsonAsync<ICollection<Employee>>("https://localhost:7282/api/employee/getall");
+    }
+
+    private async Task<GridDataProviderResult<Employee>> EmployeeDataProvider(GridDataProviderRequest<Employee> request)
+    {
+        return await Task.FromResult(request.ApplyTo(Employees));
+    }
+
+    private void AllCompetences()
+    {
+        navigationManager.NavigateTo("/AllCompetences");
+    }
+
+    private void CompetenceDetails()
+    {
+        navigationManager.NavigateTo($"/competencedetails");
+    }
+
+    private async Task OnShowModalClick()
+    {
+        await modal?.ShowAsync();
+    }
+
+    private async Task OnHideModalClick()
+    {
+        await modal?.HideAsync();
+    }
+}

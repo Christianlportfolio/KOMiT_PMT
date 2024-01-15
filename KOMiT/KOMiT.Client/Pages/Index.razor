@@ -1,0 +1,215 @@
+﻿@page "/"
+@using KOMiT.Core.Model;
+@inject HttpClient _httpClient
+@inject NavigationManager navigationManager
+
+
+
+@if (Projects == null)
+{
+    <h1>Loading...</h1>
+}
+else
+{
+    <div style="margin:5px">
+        <Button Color="ButtonColor.Primary" @onclick="OnShowModalClickAddProject">Opret Projekt  </Button>
+        <Button Color="ButtonColor.Primary" @onclick="OnShowModalClick">Opret standardfase  </Button>
+        <Modal @ref="modalAddProject" Title="Opret Projekt">
+            <BodyTemplate>
+                <CreateProject OnClick="OnHideModalClickAddProject">
+                </CreateProject>
+            </BodyTemplate>
+        </Modal>
+        
+        <Modal @ref="modalUpdateProject"> 
+            <BodyTemplate>
+                <UpdateProject Project="selectedProject" OnClick="OnHideModalUpdateProjectClick" OnUpdate="OnHideModalUpdateProjectClick">
+        </UpdateProject>
+        </BodyTemplate>
+        </Modal>
+
+        <Modal @ref="modalFinishProject">
+            <BodyTemplate>
+                <FinishProject Project="selectedProject"  OnClick="OnHideModalFinishProjectClick" OnUpdate="OnHideModalFinishProjectClick">
+                </FinishProject>
+            </BodyTemplate>
+        </Modal>
+
+
+        <Modal @ref="modal" Title="Opret standardfase">
+            <BodyTemplate>
+                <CreateStandardPhase OnClick="OnHideModalClick">
+                </CreateStandardPhase>
+            </BodyTemplate>
+        </Modal>
+    </div>
+    <Grid DataProvider="ProjectDataProvider" HeaderRowCssClass="bg-secondary text-white border-bottom-0" TItem="Project" AllowPaging="true" PageSize="12" AllowSorting="true">
+        <GridColumn TItem="Project" HeaderText="Id" SortKeySelector=" Item => Item.Id">
+            @context.Id
+        </GridColumn>
+        <GridColumn TItem="Project" HeaderText="Projekt" SortKeySelector="Item => Item.Name">
+            @foreach (var item in Projects)
+            {
+                if (item.Id == context.Id)
+                {
+                    <Button @onclick="() => ProjectDetails(item.Id)" Color="ButtonColor.Link">@item.Name</Button>
+                }
+            }
+        </GridColumn>
+        <GridColumn TItem="Project">
+            @if (context.Status == Core.Model.Enum.Status.Aktiv)
+            {
+                <Icon Name="IconName.CircleFill" Color="IconColor.Warning" />
+            }
+            else if (context.Status == Core.Model.Enum.Status.Inaktiv)
+            {
+                <Icon Name="IconName.CircleFill" Color="IconColor.Danger" />
+            }
+            else
+            {
+                <Icon Name="IconName.CircleFill" Color="IconColor.Success" />
+            }
+        </GridColumn>
+        <GridColumn TItem="Project" HeaderText="Status" SortKeySelector=" Item => Item.Status">
+            @context.Status.ToString()
+        </GridColumn>
+        <GridColumn TItem="Project">
+            <Dropdown AutoClose="true">
+                <DropdownToggleButton Color="ButtonColor.None"><Icon Name="IconName.PlusCircleFill" Color="IconColor.Primary" /></DropdownToggleButton>
+                <DropdownMenu>
+                    <DropdownItem @onclick="async () => await OnShowModalFinishhProjectClick(context)" Type="ButtonType.Link"> <Icon Name="IconName.CheckSquareFill" Color="IconColor.Primary" /> Afslut</DropdownItem>
+                    <DropdownItem @onclick="async () => await OnShowModalUpdatehProjectClick(context)" Type="ButtonType.Link"> <Icon Name="IconName.PencilSquare" Color="IconColor.Primary" /> Rediger</DropdownItem>
+                    <DropdownItem @onclick="@(async () => await DeleteProject(context.Id))" Type="ButtonType.Link"> <Icon Name="IconName.Trash3Fill" Color="IconColor.Primary" /> Slet</DropdownItem>
+                </DropdownMenu>
+            </Dropdown>
+        </GridColumn>
+        <GridColumn TItem="Project" HeaderText="Beskrivelse">
+            <div style="text-align:center">
+                <Tooltip Title="@context.Description">
+                    <Icon Name="IconName.InfoCircleFill" Color="IconColor.Primary" />
+                </Tooltip>
+            </div>
+        </GridColumn>
+        <GridColumn TItem="Project" HeaderText="Projekttype" SortKeySelector=" Item => Item.ProjectType">
+            @context.ProjectType.ToString()
+        </GridColumn>
+        <GridColumn TItem="Project" HeaderText="Prioritet" SortKeySelector=" Item => Item.Priority">
+            @context.Priority.ToString()
+        </GridColumn>
+        <GridColumn TItem="Project" HeaderText="Fase" SortKeySelector="Item => Item.CurrentPhases.FirstOrDefault().StandardPhase.Name">
+            @foreach (var item in @context.CurrentPhases)
+            {
+                <Button @onclick="() => PhaseDetails(item.Id)" Color="ButtonColor.Link">@item.StandardPhase.Name</Button>
+            }
+        </GridColumn>
+        <GridColumn TItem="Project">
+            <Dropdown AutoClose="true">
+                <DropdownToggleButton Color="ButtonColor.None"><Icon Name="IconName.PlusCircleFill" Color="IconColor.Primary" /></DropdownToggleButton>
+                <DropdownMenu>
+                    <DropdownItem To="#" Type="ButtonType.Link"> <Icon Name="IconName.CheckSquareFill" Color="IconColor.Primary" /> Afslut</DropdownItem>
+                    <DropdownItem To="#" Type="ButtonType.Link"> <Icon Name="IconName.PencilSquare" Color="IconColor.Primary" /> Rediger</DropdownItem>
+                    <DropdownItem To="#" Type="ButtonType.Link"> <Icon Name="IconName.Trash3Fill" Color="IconColor.Primary" /> Slet</DropdownItem>
+                </DropdownMenu>
+            </Dropdown>
+
+        </GridColumn>
+        <GridColumn TItem="Project" HeaderText="Startdato" SortKeySelector="Item => Item.CurrentPhases.FirstOrDefault().EstimatedStartDate">
+            @foreach (var item in @context.CurrentPhases)
+            {
+                @item.EstimatedStartDate.ToShortDateString()
+            }
+        </GridColumn>
+        <GridColumn TItem="Project" HeaderText="Næste delmål">
+        </GridColumn>
+        <GridColumn TItem="Project" HeaderText="Slutdato" SortKeySelector="Item => Item.CurrentPhases.FirstOrDefault().EstimatedEndDate">
+            @foreach (var item in @context.CurrentPhases)
+            {
+                @item.EstimatedEndDate.ToShortDateString()
+            }
+        </GridColumn>
+    </Grid>
+
+
+    @code {
+    public ICollection<Project>? Projects { get; set; }
+    private Modal modal;
+    private Modal modalAddProject;
+    private Modal modalFinishProject;
+    private Modal modalUpdateProject;
+    private Project selectedProject;
+
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        Projects = await _httpClient.GetFromJsonAsync<ICollection<Project>>("https://localhost:7282/api/project/getall");
+    }
+
+    private async Task<GridDataProviderResult<Project>> ProjectDataProvider(GridDataProviderRequest<Project> request)
+    {
+        return await Task.FromResult(request.ApplyTo(Projects));
+    }
+
+    private void PhaseDetails(int ID)
+    {
+        navigationManager.NavigateTo($"/phasedetails/{ID}");
+    }
+
+    private void ProjectDetails(int ID)
+    {
+        navigationManager.NavigateTo($"/projectdetails/{ID}");
+
+    }
+
+    private async Task OnShowModalClick()
+    {
+        await modal?.ShowAsync();
+    }
+
+    private async Task OnHideModalClick()
+    {
+        await modal?.HideAsync();
+    }
+    private async Task OnShowModalClickAddProject()
+    {
+        await modalAddProject.ShowAsync();
+    }
+    private async Task OnHideModalClickAddProject()
+    {
+        await modalAddProject.HideAsync();
+    }
+
+    private async Task DeleteProject(int id)
+    {
+        await _httpClient.DeleteAsync($"https://localhost:7282/api/project/DeleteProject/{id}");
+        navigationManager.NavigateTo("/", true);
+
+    }
+    private void SelectedProject(Project project)
+    {
+        selectedProject = project;
+    }
+    private async Task OnShowModalFinishhProjectClick(Project project)
+    {
+        SelectedProject(project);
+        await modalFinishProject.ShowAsync();
+    }
+
+    private async Task OnHideModalFinishProjectClick()
+    {
+        await modalFinishProject.HideAsync();
+    }
+
+    private async Task OnShowModalUpdatehProjectClick(Project project) 
+    {
+        SelectedProject(project);
+        await modalUpdateProject.ShowAsync();
+    }
+
+    private async Task OnHideModalUpdateProjectClick()
+    {
+        await modalUpdateProject.HideAsync();
+    }
+
+    }
+}

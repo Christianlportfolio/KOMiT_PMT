@@ -1,0 +1,44 @@
+﻿@page "/AllCompetences"
+@inject HttpClient _httpClient
+@inject NavigationManager navigationManager
+
+
+@if (competences == null)
+{
+    <h1>Loading...</h1>
+}
+else
+{
+    <Grid DataProvider="CompetenceDataProvider" HeaderRowCssClass="bg-secondary text-white border-bottom-0" TItem="Competence" AllowFiltering="true" AllowPaging="true" PageSize="15" AllowSorting="true">
+        <GridColumn TItem="Competence" HeaderText="Kompetence" PropertyName="Title" SortKeySelector="Item => Item.Title">
+            @context.Title
+        </GridColumn>
+        <GridColumn TItem="Competence" HeaderText="Erfaring" PropertyName="Experience" SortKeySelector="Item => Item.Experience">
+            @context.Experience
+        </GridColumn>
+        <GridColumn TItem="Competence" HeaderText="Beskrivelse">
+            <Tooltip Title="@context.Description">
+                    <Icon Name="IconName.InfoCircleFill" Color="IconColor.Primary" />
+                </Tooltip>
+        </GridColumn>
+          <GridColumn TItem="Competence" HeaderText="Ansat" SortKeySelector="Item => Item.Employee.Name">
+            @context.Employee.Name
+        </GridColumn>      
+    </Grid>
+}
+
+@code {
+    private ICollection<Competence>? competences;
+
+    protected override async Task OnInitializedAsync()
+    {
+        competences = await _httpClient.GetFromJsonAsync<ICollection<Competence>>("https://localhost:7282/api/competence/getall");
+    }
+
+    private async Task<GridDataProviderResult<Competence>> CompetenceDataProvider(GridDataProviderRequest<Competence> request)
+    {
+        return await Task.FromResult(request.ApplyTo(competences));
+    }
+
+}
+
