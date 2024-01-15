@@ -1,0 +1,119 @@
+﻿@using KOMiT.Core.Model
+@using KOMiT.Core.Model.Enum;
+@inject HttpClient http
+@inject NavigationManager navManger
+@inject ConfirmationService confirmationService
+
+
+<EditForm class="container" Model="Project">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+    <div class="form-group" style="margin-bottom:10px">
+        <label>Projektnavn</label>
+        <input @bind-value="Project.Name" class="form-control" />
+    </div>
+    <div class="form-group" style="margin-bottom:10px">
+        <label>Beskrivelse</label>
+        <InputTextArea @bind-Value="Project.Description" class="form-control" />
+    </div>
+    <div class="form-group" style="margin-bottom:10px">
+        <label>Projekttype</label>
+        <InputSelect @bind-Value="Project.ProjectType">
+            @foreach (var projectType in Enum.GetValues(typeof(ProjectType)))
+            {
+                <option value="@projectType">
+                    @projectType
+                </option>
+            }
+        </InputSelect>
+        <span asp-validation-for="project.Status" class="text-danger"></span>
+    </div>
+    <div class="form-group" style="margin-bottom:10px">
+        <label>Prioritet</label>
+        <InputSelect @bind-Value="Project.Priority">
+            @foreach (var priority in Enum.GetValues(typeof(Priority)))
+            {
+                <option value="@priority">
+                    @priority
+                </option>
+            }
+        </InputSelect>
+        <span asp-validation-for="project.Prioritet" class="text-danger"></span>
+    </div>
+    <div class="form-group" style="margin-bottom:10px">
+        <label>Status</label>
+        <InputSelect @bind-Value="Project.Status">
+            @foreach (var status in Enum.GetValues(typeof(Status)))
+            {
+                <option value="@status">
+                    @status
+                </option>
+            }
+        </InputSelect>
+        <span asp-validation-for="project.Status" class="text-danger"></span>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="form-group">
+                <label>Startdato</label>
+                <div>
+                    <InputDate style="width: 150px;" @bind-Value="Project.EstimatedStartDate" class="form-control" />
+                </div>
+                <span asp-validation-for="Project.Startdato" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="form-group">
+                <label>Slutdato</label>
+                <div>
+                    <InputDate style="width: 150px;" @bind-Value="Project.EstimatedEndDate" class="form-control" />
+                </div>
+                <span asp-validation-for="Project.slutdato" class="text-danger"></span>
+            </div>
+        </div>
+    </div>
+
+    <div style="margin-top:10px;">
+        <Button Color="ButtonColor.Primary" @onclick="Update"> Opret</Button>
+        <Button Color="ButtonColor.Secondary" @onclick="OnClick">Luk</Button>
+    </div>
+
+</EditForm>
+@code {
+    [Parameter]
+    public int ID { get; set; }
+
+    [Parameter]
+    public Project? Project { get; set; }
+
+    [Parameter]
+    public EventCallback<MouseEventArgs> OnClick { get; set; }
+
+    [Parameter]
+    public EventCallback OnUpdate { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+
+    }
+
+    private async Task Update()
+    {
+        var response = await http.PostAsJsonAsync("https://localhost:7282/api/Project/UpdateProject", Project);
+        await OnUpdate.InvokeAsync();
+
+        if (response.IsSuccessStatusCode)
+        {
+            confirmationService.SetSuccessMessage("Projektet er opdateret!");
+        }
+        else
+        {
+            confirmationService.SetWarningMessage("Fejl ved opdatering af projektet. Prøv igen.");
+        }
+    }
+    void SetPriority(Core.Model.Enum.Priority priority)
+    {
+        Project.Priority = priority;
+    }
+}

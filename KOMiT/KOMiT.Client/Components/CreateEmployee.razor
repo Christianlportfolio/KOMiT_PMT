@@ -1,0 +1,68 @@
+﻿@using KOMiT.Core.Model
+@inject HttpClient http
+@inject NavigationManager navManger
+@inject ConfirmationService confirmationService
+
+<EditForm class="container" Model="employee" OnValidSubmit="@Create">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="form-group">
+        <label>Navn</label>
+        <input @bind-value="employee.Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+    <div class="form-group">
+        <label>Stilling</label>
+        <input @bind-value="employee.JobPosition" class="form-control" />
+        <span asp-validation-for="JobPosition" class="text-danger"></span>
+    </div>
+    <div class="form-group">
+        <label>Email</label>
+        <input @bind-value="employee.Email" class="form-control" />
+        <span asp-validation-for="Email" class="text-danger"></span>
+    </div>
+    <div style="margin-top:10px;">
+        <Button Color="ButtonColor.Secondary" @onclick="OnClick">Luk</Button>
+        <Button Color="ButtonColor.Primary" @onclick="async () => await Create()"> Opret</Button>
+    </div>
+</EditForm>
+
+
+
+@if (!string.IsNullOrEmpty(confirmationService.SuccessMessage))
+{
+    <div class="alert alert-success">
+        <b>@confirmationService.SuccessMessage</b>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(confirmationService.WarningMessage))
+{
+    <div class="alert alert-danger">
+        <b>@confirmationService.WarningMessage</b>
+    </div>
+}
+
+@code {
+    public Employee employee = new Employee();
+
+    [Parameter]
+    public EventCallback<MouseEventArgs> OnClick { get; set; }
+
+    private async Task Create()
+    {
+        var response = await http.PostAsJsonAsync("https://localhost:7282/api/employee/CreateEmployee", employee);
+        if (response.IsSuccessStatusCode)
+        {
+            confirmationService.SetSuccessMessage("Ansat er oprettet succesfuldt!");
+            navManger.NavigateTo("/employeeIndex", true);
+
+        }
+        else
+        {
+            confirmationService.SetWarningMessage("Fejl ved oprettelse af ansat. Prøv igen.");
+        }
+    }
+}
+

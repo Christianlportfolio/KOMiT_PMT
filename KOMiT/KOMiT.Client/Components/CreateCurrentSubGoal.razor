@@ -1,0 +1,54 @@
+﻿@using KOMiT.Core.Model
+@inject HttpClient http
+@inject NavigationManager navigationManager
+
+
+        <EditForm class="container" Model="_currentSubGoal" OnValidSubmit="@Create">
+            <DataAnnotationsValidator  />
+            <ValidationSummary />
+
+            <div class="form-group">
+                <label>Navn på delmål</label>
+        <InputText @bind-Value="_currentSubGoal.Name" class="form-control" />
+            </div>
+            <div class="form-group">
+                <label>Beskrivelse</label>
+        <InputTextArea @bind-Value="_currentSubGoal.Description" class="form-control" />
+            </div>
+            <div class="form-group">
+                <label>slutdato</label>
+        <InputDate style="max-width:150px;" @bind-Value="_currentSubGoal.EstimatedEndDate" class="form-control" />
+            </div>
+            <div style="margin-top:10px;">
+            <Button Color="ButtonColor.Secondary" @onclick="OnClick">Luk</Button>
+            <Button Color="ButtonColor.Primary" @onclick="Create"> Opret</Button>
+            </div>
+        </EditForm>
+
+@code {
+    [Parameter]
+    public int ID { get; set; }
+
+    [Parameter]
+    public EventCallback<MouseEventArgs> OnClick { get; set; }
+
+    private CurrentSubGoal? _currentSubGoal;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _currentSubGoal = new CurrentSubGoal();
+        _currentSubGoal.Status = Core.Model.Enum.Status.Aktiv;
+        _currentSubGoal.CurrentPhaseId = ID;
+        _currentSubGoal.EstimatedEndDate = DateTime.Today;
+    }
+
+    private async Task Create()
+    {
+        var response = await http.PostAsJsonAsync("https://localhost:7282/api/CurrentSubGoal/CreateCurrentSubGoal", _currentSubGoal);
+
+        if (response.IsSuccessStatusCode)
+        {
+            navigationManager.NavigateTo($"/phasedetails/{ID}", true);
+        }
+    }
+}

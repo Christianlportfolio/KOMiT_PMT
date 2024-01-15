@@ -1,0 +1,62 @@
+﻿@using KOMiT.Core.Model
+@inject HttpClient http
+@inject NavigationManager navManger
+@inject ConfirmationService confirmationService 
+
+
+<EditForm class="container" Model="Project" OnValidSubmit="@Create">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+    <h2>Afslut project: @Project.Name</h2>
+    <div class="form-group">
+        <p> <Icon Name="IconName.Calendar" Color="IconColor.Primary" />Deadline: @Project.EstimatedEndDate.ToShortDateString()</p>
+        <p> <Icon Name="IconName.Calendar" Color="IconColor.Primary" />Afslut: @Project.RealizedDate?.ToShortDateString()</p>
+    </div>
+    <div class="form-group">
+        <label>Kommentar</label>
+        <InputTextArea @bind-Value="Project.Comment" class="form-control" />
+    </div>
+    <div style="margin-top:10px;">
+        <Button Color="ButtonColor.Secondary" @onclick="OnClick">Luk</Button>
+        <Button Color="ButtonColor.Primary" @onclick="Create"> Afslut</Button>
+    </div>
+</EditForm>
+
+@code {
+
+    [Parameter]
+    public EventCallback<MouseEventArgs> OnClick { get; set; }
+
+    [Parameter]
+    public Project? Project { get; set; }
+
+    [Parameter]
+    public EventCallback OnUpdate { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Project.Status = Core.Model.Enum.Status.Færdiggjort;
+        Project.RealizedDate = DateTime.Today;
+        foreach (var currentPhases in Project.CurrentPhases)
+        {
+            currentPhases.Status = Core.Model.Enum.Status.Færdiggjort;
+        }
+    }
+
+    private async Task Create()
+    {
+
+        var response = await http.PostAsJsonAsync("https://localhost:7282/api/Project/FinishProject", Project);
+        await OnUpdate.InvokeAsync();
+        if (response.IsSuccessStatusCode)
+        {
+            confirmationService.SetSuccessMessage("Projektet er afsluttet!");
+            
+        }
+        else
+        {
+            confirmationService.SetWarningMessage("Fejl ved afslutning af projektet. Prøv igen.");
+        }
+
+    }
+}

@@ -1,0 +1,125 @@
+﻿@using KOMiT.Core.Model
+@using KOMiT.Core.Model.Enum;
+@inject HttpClient http
+@inject NavigationManager navManger
+@inject ConfirmationService confirmationService
+
+
+<EditForm class="container" Model="project">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="form-group" style="margin-bottom:10px">
+        <label>Projektnavn</label>
+        <input @bind-value="project.Name" class="form-control" />
+        <span asp-validation-for="project.Name" class="text-danger"></span>
+    </div>
+    <div class="form-group" style="margin-bottom:10px">
+        <label>Beskrivelse</label>
+        <InputTextArea @bind-Value="project.Description" class="form-control" />
+    </div>
+    <div class="form-group" style="margin-bottom:10px">
+        <label>Projekttype</label>
+        <InputSelect @bind-Value="project.ProjectType">
+            @foreach (var projectType in Enum.GetValues(typeof(ProjectType)))
+            {
+                <option value="@projectType">
+                    @projectType
+                </option>
+            }
+        </InputSelect>
+        <span asp-validation-for="project.Status" class="text-danger"></span>
+    </div>
+    <div class="form-group" style="margin-bottom:10px">
+        <label>Prioritet</label>
+        <InputSelect @bind-Value="project.Priority">
+            @foreach (var priority in Enum.GetValues(typeof(Priority)))
+            {
+                <option value="@priority">
+                    @priority
+                </option>
+            }
+        </InputSelect>
+        <span asp-validation-for="project.Prioritet" class="text-danger"></span>
+    </div>
+    <div class="form-group" style="margin-bottom:10px">
+        <label>Status</label>
+        <InputSelect @bind-Value="project.Status">
+            @foreach (var status in Enum.GetValues(typeof(Status)))
+            {
+                <option value="@status">
+                    @status
+                </option>
+            }
+        </InputSelect>
+        <span asp-validation-for="project.Status" class="text-danger"></span>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="form-group">
+                <label>Startdato</label>
+                <div>
+                    <InputDate style="width: 150px;" @bind-Value="project.EstimatedStartDate" class="form-control" />
+                </div>
+                <span asp-validation-for="project.Startdato" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="form-group">
+                <label>Slutdato</label>
+                <div>
+                    <InputDate style="width: 150px;" @bind-Value="project.EstimatedEndDate" class="form-control" />
+                </div>
+                <span asp-validation-for="project.slutdato" class="text-danger"></span>
+            </div>
+        </div>
+    </div>
+
+    <div style="margin-top:10px;">
+        <Button Color="ButtonColor.Primary" @onclick="Create"> Opret</Button>
+        <Button Color="ButtonColor.Secondary" @onclick="OnClick">Luk</Button>
+    </div>
+
+</EditForm>
+
+
+@if (!string.IsNullOrEmpty(confirmationService.SuccessMessage))
+{
+    <div class="alert alert-success">
+        <b>@confirmationService.SuccessMessage</b>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(confirmationService.WarningMessage))
+{
+    <div class="alert alert-danger">
+        <b>@confirmationService.WarningMessage</b>
+    </div>
+}
+
+@code {
+    public Project project = new Project();
+    [Parameter]
+    public EventCallback<MouseEventArgs> OnClick { get; set; }
+
+    private async Task Create()
+    {
+        if (project.EstimatedEndDate == default)
+        {
+            project.EstimatedEndDate = DateTime.Now;
+        }
+        project.EstimatedStartDate = DateTime.Now;
+        var response = await http.PostAsJsonAsync("https://localhost:7282/api/Project/CreateProject", project);
+
+        if (response.IsSuccessStatusCode)
+        {
+            confirmationService.SetSuccessMessage("Projektet er oprettet succesfuldt!");
+            navManger.NavigateTo("/", true);
+        }
+        else
+        {
+            confirmationService.SetWarningMessage("Fejl ved oprettelse af Projekt. Prøv igen.");
+        }
+    }
+}

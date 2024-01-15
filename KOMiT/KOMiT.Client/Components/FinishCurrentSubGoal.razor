@@ -1,0 +1,67 @@
+﻿@using KOMiT.Core.Model
+@inject HttpClient http
+@inject NavigationManager navigationManager
+
+
+<EditForm class="container" Model="CurrentSubGoal" OnValidSubmit="@Create">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+    <h2>Afslut delmål: @CurrentSubGoal.Name</h2>
+    <div class="form-group">
+        <p> <Icon Name="IconName.Calendar" Color="IconColor.Primary" />Deadline: @CurrentSubGoal.EstimatedEndDate.ToShortDateString()</p>
+        <p> <Icon Name="IconName.Calendar" Color="IconColor.Primary" />Afslut: @CurrentSubGoal.RealizedDate?.ToShortDateString()</p>
+    </div>
+    <div class="form-group">
+        <label>Kommentar</label>
+        <InputTextArea @bind-Value="CurrentSubGoal.Comment" class="form-control" />
+    </div>
+    <div style="margin-top:10px;">
+        <Button Color="ButtonColor.Secondary" @onclick="OnClick">Luk</Button>
+        <Button Color="ButtonColor.Primary" @onclick="Create"> Afslut</Button>
+    </div>
+</EditForm>
+
+@code {
+    [Parameter]
+    public int ID { get; set; }
+
+    [Parameter]
+    public EventCallback<MouseEventArgs> OnClick { get; set; }
+
+    [Parameter]
+    public CurrentSubGoal? CurrentSubGoal { get; set; }
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        CurrentSubGoal.Status = Core.Model.Enum.Status.Færdiggjort;
+        CurrentSubGoal.RealizedDate = DateTime.Today;
+        CurrentSubGoal.CurrentPhaseId = ID;
+        foreach (var currentTask in CurrentSubGoal.CurrentTasks)
+        {
+            currentTask.Status = Core.Model.Enum.Status.Færdiggjort;
+        }
+    }
+
+    private async Task Create()
+    {
+        try
+        {
+            var response = await http.PutAsJsonAsync("https://localhost:7282/api/CurrentSubGoal/FinishCurrentSubGoal", CurrentSubGoal);
+            if (response.IsSuccessStatusCode)
+            {
+                navigationManager.NavigateTo($"/phasedetails/{ID}", true);
+            }        
+        }
+        catch (HttpRequestException ex)
+        {
+            Console.WriteLine($"HTTP request error: {ex.Message}");
+            throw;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"An error occurred: {ex.Message}");
+            throw;
+        }
+    }
+}

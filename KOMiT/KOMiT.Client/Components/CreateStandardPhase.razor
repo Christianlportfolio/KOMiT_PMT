@@ -1,0 +1,64 @@
+﻿@using KOMiT.Core.Model
+@inject HttpClient http
+@inject NavigationManager navManger
+@inject ConfirmationService confirmationService
+
+
+
+<EditForm class="container" Model="StandardPhase" OnValidSubmit="@Create">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="form-group">
+        <label>Navn</label>
+        <input @bind-value="StandardPhase.Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+    <div class="form-group">
+        <label>Beskrivelse</label>
+        <input @bind-value="StandardPhase.Description" class="form-control" />
+        <span asp-validation-for="Beskrivelse" class="text-danger"></span>
+    </div>
+    <div style="margin-top:10px;">
+        <Button Color="ButtonColor.Secondary" @onclick="OnClick">Luk</Button>
+        <Button Color="ButtonColor.Primary" @onclick="async () => await Create()"> Opret</Button>
+    </div>
+</EditForm>
+
+
+
+@if (!string.IsNullOrEmpty(confirmationService.SuccessMessage))
+{
+    <div class="alert alert-success">
+        <b>@confirmationService.SuccessMessage</b>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(confirmationService.WarningMessage))
+{
+    <div class="alert alert-danger">
+        <b>@confirmationService.WarningMessage</b>
+    </div>
+}
+
+@code {
+    public StandardPhase StandardPhase = new StandardPhase();
+
+    [Parameter]
+    public EventCallback<MouseEventArgs> OnClick { get; set; }
+
+    private async Task Create()
+    {
+        var response = await http.PostAsJsonAsync("https://localhost:7282/api/standardphase/CreatePhase", StandardPhase);
+        if (response.IsSuccessStatusCode)
+        {
+            confirmationService.SetSuccessMessage("Standardfase er oprettet succesfuldt!");
+            navManger.NavigateTo("/", true);
+        }
+        else
+        {
+            confirmationService.SetWarningMessage("Fejl ved oprettelse af standardfase. Prøv igen.");
+        }
+    }
+}
+

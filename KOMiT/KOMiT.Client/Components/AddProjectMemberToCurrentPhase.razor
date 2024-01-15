@@ -1,0 +1,74 @@
+﻿@using Core.Model.Enum
+@inject HttpClient http
+@inject NavigationManager navigationManager
+
+
+<EditForm class="container" Model="_projectMember" OnValidSubmit="Create">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="form-group">
+        <label>Vælg ansat</label>
+        <InputSelect @bind-Value="selectedEmployeeId">
+            @foreach (var employee in _employees)
+            {
+                <option value="@employee.Id">@employee.Name</option>
+            }
+        </InputSelect>
+    </div>
+    <div class="form-group">
+        <label>Vælg projektrolle</label>
+        <InputSelect @bind-Value="_projectMember.ProjectRole">
+            @foreach (var projectRole in Enum.GetValues(typeof(ProjectRole)))
+            {
+
+                <option value="@projectRole">@projectRole</option>
+            }
+        </InputSelect>
+    </div>
+    <div class="form-group">
+        <label>Vælg status</label>
+        <InputSelect @bind-Value="_projectMember.ProjectMemberStatus">
+            @foreach (var projectMemberStatus in Enum.GetValues(typeof(ProjectMemberStatus)))
+            {
+
+                <option value="@projectMemberStatus">@projectMemberStatus</option>
+            }
+        </InputSelect>
+    </div>
+    <div style="margin-top:10px;">
+        <Button Color="ButtonColor.Secondary" @onclick="OnClick">Luk</Button>
+        <Button Color="ButtonColor.Primary" @onclick="Create"> Opret</Button>
+    </div>
+</EditForm>
+
+
+
+@code {
+    [Parameter]
+    public int ID { get; set; }
+
+    [Parameter]
+    public EventCallback<MouseEventArgs> OnClick { get; set; }
+
+    private List<Employee>? _employees;
+
+    private ProjectMember _projectMember = new ProjectMember();
+
+    private int selectedEmployeeId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _employees = await http.GetFromJsonAsync<List<Employee>>($"https://localhost:7282/api/ProjectMember/GetEmployeesWithoutProjectMemberToCurrentPhase/{ID}");
+    }
+
+    private async Task Create()
+    {
+        var response = await http.PostAsJsonAsync($"https://localhost:7282/api/ProjectMember/AddProjectMemberToCurrentPhase/{ID}/{selectedEmployeeId}", _projectMember);
+
+        if (response.IsSuccessStatusCode)
+        {
+            navigationManager.NavigateTo($"/phasedetails/{ID}", true);
+        }
+    }
+}
